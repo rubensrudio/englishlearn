@@ -1,46 +1,61 @@
 # EnglishLearn
 
-Aplicacao simples para cadastrar palavras em ingles e suas traducoes em portugues, com backend em Java e frontend em Angular.
+A simple app to register English words and their Portuguese translations, with a Java backend and an Angular frontend.
 
 ## Backend (Spring Boot + SQLite)
 
-1) Abra um terminal na pasta `backend`.
-2) Execute:
+1) Open a terminal in the `backend` folder.
+2) Run:
 
 ```
 mvn spring-boot:run
 ```
 
-A API sobe em `http://localhost:8080`.
+The API runs at `http://localhost:8080`.
 
 ## Frontend (Angular)
 
-1) Abra um terminal na pasta `frontend`.
-2) Execute:
+1) Open a terminal in the `frontend` folder.
+2) Run:
 
 ```
 npm install
 npm start
 ```
 
-O frontend sobe em `http://localhost:4200`.
+The frontend runs at `http://localhost:4200`.
 
 ## AI Service (Python + LLM local)
 
-1) Certifique-se de ter uma IA local rodando em `http://127.0.0.1:1234/v1/chat/completions`.
-2) Opcional: configure `LLM_URL` e `LLM_MODEL`.
-3) Abra um terminal na raiz do projeto e execute:
+1) Make sure you have a local AI model running at `http://127.0.0.1:1234/v1/chat/completions`.
+2) Optional: configure `LLM_URL` and `LLM_MODEL`.
+3) Open a terminal in the project root and create/activate the virtual environment:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+4) Install dependencies and start the service:
 
 ```
 pip install -r requirements.txt
-uvicorn ai_service:app --reload --port 8000
+python -m uvicorn ai_service:app --reload --port 8000
 ```
 
-O backend chama o endpoint `http://localhost:8000/classify` para obter a classe gramatical.
+If you prefer, without activating the virtual environment:
+
+```powershell
+{path}/EnglishLearn/.venv/Scripts/python.exe -m uvicorn ai_service:app --reload --port 8000
+```
+
+Do not use `uvicorn .\\ai_service.py:app ...` (file path). The correct format is `module:variable`, in this case `ai_service:app`.
+
+The backend calls `http://localhost:8000/classify` to get the part of speech.
 
 ## Endpoints
 
-- `GET /words` lista todas as palavras
-- `POST /words` cria uma palavra (retorna 409 se ja existir)
-- `PUT /words/{id}` atualiza uma palavra
-- `DELETE /words/{id}` exclui uma palavra
+- `GET /words` lists all words
+- `POST /words` creates a word (returns 409 if it already exists)
+- `PUT /words/{id}` updates a word
+- `DELETE /words/{id}` deletes a word

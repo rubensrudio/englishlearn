@@ -9,11 +9,17 @@ export interface Word {
   partOfSpeech?: string;
 }
 
+export interface ExamplesResponse {
+  word: string;
+  examples: string[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class WordService {
   private readonly apiUrl = 'http://localhost:8080';
+  private readonly aiUrl = 'http://localhost:8000';
 
   constructor(private readonly http: HttpClient) {}
 
@@ -31,5 +37,9 @@ export class WordService {
 
   deleteWord(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/words/${id}`);
+  }
+
+  getExamples(word: string): Observable<ExamplesResponse> {
+    return this.http.post<ExamplesResponse>(`${this.aiUrl}/examples`, { word });
   }
 }

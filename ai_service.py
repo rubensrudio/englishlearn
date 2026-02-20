@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import re
@@ -6,6 +7,15 @@ import unicodedata
 import requests
 
 app = FastAPI()
+
+# Enable CORS for frontend (localhost:4200)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 ALLOWED_TAGS = {
     "noun",
@@ -47,6 +57,12 @@ SYSTEM_PROMPT = (
     "If multiple apply, return multiple tags. Return only the list."
 )
 
+EXAMPLES_PROMPT = (
+    "Generate exactly 3 example sentences using the given English word. "
+    "Each sentence should be on a new line (no numbering, just the sentence). "
+    "Return only the 3 sentences, nothing else."
+)
+
 
 class ClassifyRequest(BaseModel):
     word: str
@@ -54,6 +70,15 @@ class ClassifyRequest(BaseModel):
 
 class ClassifyResponse(BaseModel):
     partsOfSpeech: str
+
+
+class ExamplesRequest(BaseModel):
+    word: str
+
+
+class ExamplesResponse(BaseModel):
+    word: str
+    examples: list[str]
 
 
 def get_llm_url() -> str:
@@ -132,3 +157,39 @@ async def classify(request: ClassifyRequest) -> ClassifyResponse:
     )
     parts_of_speech = normalize_tags(content)
     return ClassifyResponse(partsOfSpeech=parts_of_speech)
+
+
+@app.post("/examples", response_model=ExamplesResponse)
+async def get_examples(request: ExamplesRequest) -> ExamplesResponse:
+    if not request.word or not request.word.strip():
+        raise HTTPException(status_code=400, detail="word is required")
+
+    model = os.getenv("LLM_MODEL", "local-model")
+    llm_url = get_llm_url()
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": EXAMPLES_PROMPT},
+            {"role": "user", "content": f"Word: {request.word}"},
+        ],
+        "temperature": 0.7,
+        "max_tokens": get_max_tokens(),
+        "stream": False,
+    }
+
+    try:
+        response = requests.post(llm_url, json=payload, timeout=20)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        detail = getattr(exc.response, "text", str(exc)) if hasattr(exc, "response") else str(exc)
+        raise HTTPException(status_code=502, detail=f"LLM error: {detail}")
+
+    data = response.json()
+    content = (
+        data.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content", "")
+    )
+    examples = [line.strip() for line in content.split("\n") if line.strip()]
+    return ExamplesResponse(word=request.word, examples=examples[:3])
